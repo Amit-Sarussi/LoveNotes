@@ -1,4 +1,17 @@
-const startDate = new Date('2026-2-7');
+import { fetchStartDate } from './api';
+
+let startDate = new Date('2026-3-1');
+
+export const initStartDate = async () => {
+  try {
+    const fetchedDate = await fetchStartDate();
+    startDate = new Date(fetchedDate);
+  } catch (error) {
+    console.warn("Using fallback startDate due to fetch error:", error);
+  }
+};
+
+export const getStartDate = () => startDate;
 
 export const getDaysPassed = () => {
   const today = new Date();

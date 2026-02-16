@@ -10,6 +10,7 @@ import WideButton from '@components/WideButton';
 import { Animated } from 'react-native';
 import FloatingButton from '@components/FloatingButton';
 import { getUser, clearUser, getViewedNotes } from '@utils/storage';
+import { initStartDate } from '@utils/startDate';
 import { router, useFocusEffect } from 'expo-router';
 
 import { useColorScheme } from 'nativewind';
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   );
 
   const checkUser = async () => {
+    await initStartDate();
     const viewedNotes = await getViewedNotes();
     setViewedNotes(viewedNotes || []);
     const user = await getUser();
@@ -84,7 +86,7 @@ export default function HomeScreen() {
     : (['rgba(255,255,255,1)', 'rgba(255,255,255,0)'] as const);
 
   const viewedNotesStatus = () => {
-    const diff = getDaysPassed() - viewedNotes.length;
+    const diff = Math.max(getDaysPassed() - viewedNotes.length, 0);
     if (diff === 0) {
       return 'קראת את כל הפתקים שיש לך';
     } else if (diff === 1) {
@@ -120,6 +122,7 @@ export default function HomeScreen() {
                 onPressIn={() => setIsPressed(true)}
                 onPressOut={() => setIsPressed(false)}
                 className={`${isPressed ? 'text-[#b01541]' : 'text-[#c9184a]'} font-avigul text-4xl`}>
+                {' '}
                 {userName}
               </Text>
             </View>
@@ -153,7 +156,7 @@ export default function HomeScreen() {
             }}
           />
         </View>
-        <ProgressMap ref={mapRef} onScrollThreshold={onScrollThreshold} />
+        <ProgressMap ref={mapRef} onScrollThreshold={onScrollThreshold} daysPassed={daysPassed} />
         <FloatingButton visible={showButton} onPress={() => mapRef.current?.scrollToToday()} />
       </View>
     </SafeAreaView>
