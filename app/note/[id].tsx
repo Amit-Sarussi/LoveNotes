@@ -17,7 +17,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchNotes, Note, sendChatMessage } from '../../utils/api';
-import { getUser } from '../../utils/storage';
+import { getUser, setViewedNote } from '../../utils/storage';
+import { initStartDate } from '../../utils/startDate';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function NoteScreen() {
@@ -37,29 +38,47 @@ export default function NoteScreen() {
   }, []);
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () =>
-      setKeyboardVisible(true)
-    );
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () =>
-      setKeyboardVisible(false)
-    );
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
 
     async function loadNote() {
+      const raw = Array.isArray(id) ? id[0] : id;
+      if (raw === undefined || raw === null || String(raw).trim() === '') {
+        setError('Invalid note');
+        setLoading(false);
+        return;
+      }
+      const noteNum = Number(raw);
+      if (Number.isNaN(noteNum) || noteNum < 1) {
+        setError('Invalid note');
+        setLoading(false);
+        return;
+      }
+
       try {
         const notes = await fetchNotes();
-        const noteIndex = Number(id) - 1;
+        const noteIndex = noteNum - 1;
         if (notes && notes[noteIndex]) {
           setNote(notes[noteIndex]);
+          await initStartDate();
+          await setViewedNote(noteNum);
         } else {
           setError('Note not found');
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load note');
       } finally {
         setLoading(false);
       }
     }
-    loadNote();
+
+    setLoading(true);
+    setError(null);
+    setNote(null);
+    void loadNote();
 
     return () => {
       showSubscription.remove();
@@ -100,22 +119,6 @@ export default function NoteScreen() {
       Alert.alert('Error', 'Failed to send reaction');
     }
   };
-
-  useEffect(() => {
-    // Use 'Will' for iOS (instant) and 'Did' for Android (which doesn't support 'Will')
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-
-    // ... rest of your loadNote logic
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [id]);
 
   return (
     <SafeAreaView

@@ -1,5 +1,6 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDaysPassed, initStartDate } from './startDate';
+import { syncWidgetSharedState } from './widgetSharedStorage';
 
 const USER_NAME_KEY = 'USER_NAME';
 const VIEWED_NOTES_KEY = 'VIEWED_NOTES';
@@ -42,9 +43,11 @@ export const getViewedNotes = async (): Promise<number[] | null> => {
 
 export const setViewedNote = async (noteId: number) => {
   try {
+    await initStartDate();
     const viewedNotes = await getViewedNotes() || [];
     const updatedNotes = Array.from(new Set([...viewedNotes, noteId]));
     await AsyncStorage.setItem(VIEWED_NOTES_KEY, JSON.stringify(updatedNotes));
+    await syncWidgetSharedState(getDaysPassed(), updatedNotes);
   } catch (e) {
     console.error("Failed to set viewed note.", e);
   }

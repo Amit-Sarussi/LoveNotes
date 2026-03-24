@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import StyledButton from './StyledButton';
-import { getDaysPassed } from '@utils/startDate';
 import { useRouter } from 'expo-router';
-import { getViewedNotes, setViewedNote } from '@utils/storage';
+import { setViewedNote } from '@utils/storage';
 
 export type ProgressMapRef = {
   scrollToToday: () => void;
@@ -11,10 +10,12 @@ export type ProgressMapRef = {
 interface ProgressMapProps {
   onScrollThreshold?: (passed: boolean) => void;
   daysPassed: number;
+  viewedNotes: number[];
+  setViewedNotes: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const ProgressMap = forwardRef<ProgressMapRef, ProgressMapProps>(
-  ({ onScrollThreshold, daysPassed }, ref) => {
+  ({ onScrollThreshold, daysPassed, viewedNotes, setViewedNotes }, ref) => {
     const router = useRouter();
     const scrollRef = useRef<ScrollView>(null);
     const lastPassed = useRef<boolean>(false);
@@ -33,23 +34,14 @@ const ProgressMap = forwardRef<ProgressMapRef, ProgressMapProps>(
       scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
     }
 
-    const [viewedNotes, setViewedNotes] = useState<number[]>([]);
-
     useImperativeHandle(ref, () => ({ scrollToToday }));
 
     useEffect(() => {
-      const loadViewedNotes = async () => {
-        const notes = await getViewedNotes();
-        if (notes) {
-          setViewedNotes(notes);
-        }
-        // Scroll after notes are loaded
-        setTimeout(() => {
-          requestAnimationFrame(scrollToToday);
-        }, 100);
-      };
-      loadViewedNotes();
-    }, []); // Only run on mount
+      const t = setTimeout(() => {
+        requestAnimationFrame(scrollToToday);
+      }, 100);
+      return () => clearTimeout(t);
+    }, [viewedNotes, daysPassed]);
 
     const buttons = React.useMemo(() => {
       const result: React.ReactElement[] = [];
@@ -64,8 +56,8 @@ const ProgressMap = forwardRef<ProgressMapRef, ProgressMapProps>(
               onPress={() => {
                 router.push(`/note/${i + 1}`);
                 setTimeout(() => {
-                  setViewedNote(i + 1);
-                  setViewedNotes((prev) => [...prev, i + 1]);
+                  void setViewedNote(i + 1);
+                  setViewedNotes((prev) => Array.from(new Set([...prev, i + 1])));
                 }, 0);
               }}
               isCurrent={!viewedNotes.includes(i + 1) && !(daysPassed < i + 1)}

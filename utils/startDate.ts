@@ -2,13 +2,21 @@ import { fetchStartDate } from './api';
 
 let startDate = new Date('2026-3-1');
 
+let initStartDatePromise: Promise<void> | null = null;
+
+/** Fetches start date once (or reuses the in-flight request) so deep links get correct `getDaysPassed`. */
 export const initStartDate = async () => {
-  try {
-    const fetchedDate = await fetchStartDate();
-    startDate = new Date(fetchedDate);
-  } catch (error) {
-    console.warn("Using fallback startDate due to fetch error:", error);
+  if (!initStartDatePromise) {
+    initStartDatePromise = (async () => {
+      try {
+        const fetchedDate = await fetchStartDate();
+        startDate = new Date(fetchedDate);
+      } catch (error) {
+        console.warn('Using fallback startDate due to fetch error:', error);
+      }
+    })();
   }
+  return initStartDatePromise;
 };
 
 export const getStartDate = () => startDate;

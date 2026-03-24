@@ -10,6 +10,7 @@ import WideButton from '@components/WideButton';
 import { Animated } from 'react-native';
 import FloatingButton from '@components/FloatingButton';
 import { getUser, clearUser, getViewedNotes } from '@utils/storage';
+import { syncWidgetSharedState } from '@utils/widgetSharedStorage';
 import { initStartDate } from '@utils/startDate';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -44,6 +45,7 @@ export default function HomeScreen() {
     if (!user) {
       router.replace('/welcome');
     } else {
+      await syncWidgetSharedState(getDaysPassed(), viewedNotes || []);
       const displayMap: Record<string, string> = {
         ori: 'אורי',
         amit: 'עמית',
@@ -156,7 +158,13 @@ export default function HomeScreen() {
             }}
           />
         </View>
-        <ProgressMap ref={mapRef} onScrollThreshold={onScrollThreshold} daysPassed={daysPassed} />
+        <ProgressMap
+          ref={mapRef}
+          onScrollThreshold={onScrollThreshold}
+          daysPassed={daysPassed}
+          viewedNotes={viewedNotes}
+          setViewedNotes={setViewedNotes}
+        />
         <FloatingButton visible={showButton} onPress={() => mapRef.current?.scrollToToday()} />
       </View>
     </SafeAreaView>
