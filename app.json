@@ -28,11 +28,14 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "me.amitsarussi.lovenotesapp",
       "backgroundColor": "#000000",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [
+          1
+        ]
       }
     },
     "android": {

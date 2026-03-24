@@ -50,3 +50,11 @@ export const setViewedNote = async (noteId: number) => {
   }
 };
 
+export const clearViewedNotes = async () => {
+  try {
+    await AsyncStorage.removeItem(VIEWED_NOTES_KEY);
+  } catch (e) {
+    console.error("Failed to clear viewed notes.", e);
+  }
+}
+

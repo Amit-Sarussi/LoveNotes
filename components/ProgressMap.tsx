@@ -62,8 +62,11 @@ const ProgressMap = forwardRef<ProgressMapRef, ProgressMapProps>(
               num={i + 1}
               disabled={daysPassed < i + 1}
               onPress={() => {
-                setViewedNote(i + 1);
                 router.push(`/note/${i + 1}`);
+                setTimeout(() => {
+                  setViewedNote(i + 1);
+                  setViewedNotes((prev) => [...prev, i + 1]);
+                }, 0);
               }}
               isCurrent={!viewedNotes.includes(i + 1) && !(daysPassed < i + 1)}
             />
