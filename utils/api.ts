@@ -43,3 +43,20 @@ export async function fetchStartDate(): Promise<string> {
   const data = await response.json();
   return data.start;
 }
+
+export async function registerPushToken(user: string, pushToken: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/push-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      user,
+      pushToken,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to register push token");
+  }
+}

@@ -16,7 +16,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getUser } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
-import { API_BASE_URL, fetchNotes, Note } from '@utils/api';
+import { API_BASE_URL, fetchNotes, Note, registerPushToken } from '@utils/api';
+import { registerForPushNotificationsAsync } from '../utils/pushNotifications';
 
 interface Message {
   id: string;
@@ -41,6 +42,7 @@ export default function ChatScreen() {
   useEffect(() => {
     checkUser();
     fetchMessages();
+    registerPushNotifications();
     const interval = setInterval(fetchMessages, 3000);
 
     // Instant keyboard listeners for padding swap
@@ -70,6 +72,21 @@ export default function ChatScreen() {
   const checkUser = async () => {
     const user = await getUser();
     setCurrentUser(user);
+  };
+
+  const registerPushNotifications = async () => {
+    try {
+      const user = await getUser();
+      if (!user) return;
+
+      const pushToken = await registerForPushNotificationsAsync();
+      if (pushToken) {
+        await registerPushToken(user, pushToken);
+        console.log('Push token registered:', pushToken);
+      }
+    } catch (error) {
+      console.error('Error registering push notifications:', error);
+    }
   };
 
   const isEmojiOnly = (text: string) => {

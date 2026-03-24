@@ -10,6 +10,7 @@ import { initStartDate, getDaysPassed } from '../utils/startDate';
 import { getUser, getViewedNotes } from '../utils/storage';
 import { syncWidgetSharedState } from '../utils/widgetSharedStorage';
 import { setupDailyReminderNotification } from '../utils/dailyReminderNotification';
+import { configurePushNotificationHandler, setupNotificationChannels } from '../utils/pushNotifications';
 
 const MyDarkTheme = {
   ...DefaultTheme,
@@ -47,6 +48,8 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    configurePushNotificationHandler();
+    void setupNotificationChannels();
     void setupDailyReminderNotification();
   }, []);
 
