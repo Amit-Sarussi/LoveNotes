@@ -14,6 +14,7 @@
       "expo-router",
       "expo-font",
       "expo-asset",
+      "expo-notifications",
       "@bacons/apple-targets"
     ],
     "orientation": "portrait",
@@ -25,23 +26,17 @@
       "resizeMode": "contain",
       "backgroundColor": "#171717"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "me.amitsarussi.lovenotesapp",
       "entitlements": {
-        "com.apple.security.application-groups": [
-          "group.me.amitsarussi.lovenotesapp"
-        ]
+        "com.apple.security.application-groups": ["group.me.amitsarussi.lovenotesapp"]
       },
       "backgroundColor": "#000000",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIDeviceFamily": [
-          1
-        ]
+        "UIDeviceFamily": [1]
       },
       "appleTeamId": "3GH53UV4WP"
     },
@@ -64,9 +59,7 @@
                   "bundleIdentifier": "me.amitsarussi.lovenotesapp.widget",
                   "targetName": "widget",
                   "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.me.amitsarussi.lovenotesapp"
-                    ]
+                    "com.apple.security.application-groups": ["group.me.amitsarussi.lovenotesapp"]
                   }
                 }
               ]

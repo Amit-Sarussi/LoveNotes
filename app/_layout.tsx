@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { initStartDate, getDaysPassed } from '../utils/startDate';
 import { getUser, getViewedNotes } from '../utils/storage';
 import { syncWidgetSharedState } from '../utils/widgetSharedStorage';
+import { setupDailyReminderNotification } from '../utils/dailyReminderNotification';
 
 const MyDarkTheme = {
   ...DefaultTheme,
@@ -43,6 +44,10 @@ export default function RootLayout() {
       }
     }
     loadAssets();
+  }, []);
+
+  useEffect(() => {
+    void setupDailyReminderNotification();
   }, []);
 
   useEffect(() => {
