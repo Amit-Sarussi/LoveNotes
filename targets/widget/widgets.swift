@@ -38,11 +38,12 @@ private enum LoveNotesColors {
 
 struct Provider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(
+        let state = loadWidgetState()
+        return SimpleEntry(
             date: Date(),
             configuration: ConfigurationAppIntent(),
-            daysPassed: 12,
-            viewedNoteIds: [1, 2, 3, 4, 5]
+            daysPassed: state.daysPassed,
+            viewedNoteIds: state.viewedNoteIds
         )
     }
 
@@ -81,9 +82,6 @@ struct SimpleEntry: TimelineEntry {
     }
 
     var widgetURL: URL? {
-        if hasNoteForToday, !hasReadTodaysNote {
-            return URL(string: "love-notes://note/\(todayNoteId)")
-        }
         return URL(string: "love-notes://")
     }
 }
@@ -93,7 +91,7 @@ struct widgetEntryView: View {
 
     var body: some View {
         Group {
-            if entry.hasNoteForToday, !entry.hasReadTodaysNote {
+            if entry.daysPassed == 0 || (entry.hasNoteForToday && !entry.hasReadTodaysNote) {
                 VStack(spacing: 0) {
                     Image("Envelope")
                         .resizable()
