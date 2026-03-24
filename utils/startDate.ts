@@ -1,6 +1,6 @@
 import { fetchStartDate } from './api';
 
-let startDate = new Date('2026-3-1');
+let startDate = new Date('2026-3-21');
 
 let initStartDatePromise: Promise<void> | null = null;
 
