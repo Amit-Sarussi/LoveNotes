@@ -29,7 +29,7 @@ export async function setupDailyReminderNotification(): Promise<void> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 7,
+      hour: 16,
       minute: 0,
       ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
     },
