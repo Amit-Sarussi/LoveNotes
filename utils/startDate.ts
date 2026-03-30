@@ -23,7 +23,10 @@ export const getStartDate = () => startDate;
 
 export const getDaysPassed = () => {
   const today = new Date();
-  return Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const dateOnly = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.floor(
+    (dateOnly(today).getTime() - dateOnly(startDate).getTime()) / (1000 * 60 * 60 * 24)
+  );
 }
 
 export const getNormalizedProgress = () => {
