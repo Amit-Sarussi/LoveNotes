@@ -4,6 +4,24 @@ import { syncWidgetSharedState } from './widgetSharedStorage';
 
 const USER_NAME_KEY = 'USER_NAME';
 const VIEWED_NOTES_KEY = 'VIEWED_NOTES';
+const PASSWORD_KEY = 'PASSWORD';
+
+export const savePassword = async (password: string) => {
+  try {
+    await AsyncStorage.setItem(PASSWORD_KEY, password);
+  } catch (e) {
+    console.error("Failed to save password.", e);
+  }
+};
+
+export const getPassword = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(PASSWORD_KEY);
+  } catch (e) {
+    console.error("Failed to fetch password.", e);
+    return null;
+  }
+};
 
 export const saveUser = async (name: string) => {
   try {

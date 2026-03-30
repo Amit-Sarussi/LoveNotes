@@ -9,7 +9,8 @@ import ProgressMap, { ProgressMapRef } from '@components/ProgressMap';
 import WideButton from '@components/WideButton';
 import { Animated } from 'react-native';
 import FloatingButton from '@components/FloatingButton';
-import { getUser, clearUser, getViewedNotes } from '@utils/storage';
+import { getUser, clearUser, getViewedNotes, getPassword } from '@utils/storage';
+import { testPassword } from '@utils/api';
 import { syncWidgetSharedState } from '@utils/widgetSharedStorage';
 import { initStartDate } from '@utils/startDate';
 import { router, useFocusEffect } from 'expo-router';
@@ -38,6 +39,12 @@ export default function HomeScreen() {
   );
 
   const checkUser = async () => {
+    const password = await getPassword();
+    if (!password || !(await testPassword(password))) {
+      router.replace('/password');
+      return;
+    }
+
     await initStartDate();
     const viewedNotes = await getViewedNotes();
     setViewedNotes(viewedNotes || []);

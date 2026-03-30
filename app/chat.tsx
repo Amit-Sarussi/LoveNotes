@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getUser } from '../utils/storage';
+import { getUser, getPassword } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL, fetchNotes, Note, registerPushToken } from '@utils/api';
 import { registerForPushNotificationsAsync } from '../utils/pushNotifications';
@@ -99,7 +99,10 @@ export default function ChatScreen() {
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch(API_URL);
+      const password = await getPassword();
+      const response = await fetch(API_URL, {
+        headers: password ? { 'x-password': password } : {},
+      });
       if (response.ok) {
         const data = await response.json();
         const sortedMessages = data.sort(
@@ -123,9 +126,13 @@ export default function ChatScreen() {
     setInputText('');
 
     try {
+      const password = await getPassword();
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(password ? { 'x-password': password } : {}),
+        },
         body: JSON.stringify({
           message: messageText,
           sender: currentUser,

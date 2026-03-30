@@ -1,6 +1,15 @@
+import { getPassword } from './storage';
+
 export const API_BASE_URL = "https://nontypically-estuarine-jace.ngrok-free.dev/api";
 export const API_BASE_URL_CLEAN = "https://nontypically-estuarine-jace.ngrok-free.dev";
 
+async function authHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
+  const password = await getPassword();
+  return {
+    ...(password ? { 'x-password': password } : {}),
+    ...extra,
+  };
+}
 
 export interface Note {
   id: string;
@@ -8,7 +17,9 @@ export interface Note {
 }
 
 export async function fetchNotes(): Promise<Note[]> {
-  const response = await fetch(`${API_BASE_URL}/notes`);
+  const response = await fetch(`${API_BASE_URL}/notes`, {
+    headers: await authHeaders(),
+  });
   if (!response.ok) {
     throw new Error("Failed to fetch notes");
   }
@@ -24,9 +35,7 @@ export interface ChatMessage {
 export async function sendChatMessage(data: ChatMessage): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/chat/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   });
 
@@ -36,7 +45,9 @@ export async function sendChatMessage(data: ChatMessage): Promise<void> {
 }
 
 export async function fetchStartDate(): Promise<string> {
-  const response = await fetch(`${API_BASE_URL_CLEAN}/start`);
+  const response = await fetch(`${API_BASE_URL_CLEAN}/start`, {
+    headers: await authHeaders(),
+  });
   if (!response.ok) {
     throw new Error("Failed to fetch start date");
   }
@@ -47,9 +58,7 @@ export async function fetchStartDate(): Promise<string> {
 export async function registerPushToken(user: string, pushToken: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/push-token`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       user,
       pushToken,
@@ -58,5 +67,16 @@ export async function registerPushToken(user: string, pushToken: string): Promis
 
   if (!response.ok) {
     throw new Error("Failed to register push token");
+  }
+}
+
+export async function testPassword(password: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/notes`, {
+      headers: { 'x-password': password },
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
