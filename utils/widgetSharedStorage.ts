@@ -18,7 +18,14 @@ export async function syncWidgetSharedState(
   const safeIds = viewedNoteIds.filter((n) => Number.isFinite(n)).map((n) => Math.floor(n));
 
   try {
-    storage.set(WIDGET_STATE_KEY, JSON.stringify({ daysPassed: safeDays, viewedNoteIds: safeIds }));
+    storage.set(
+      WIDGET_STATE_KEY,
+      JSON.stringify({
+        daysPassed: safeDays,
+        viewedNoteIds: safeIds,
+        syncedAtIso: new Date().toISOString(),
+      })
+    );
     ExtensionStorage.reloadWidget();
   } catch (e) {
     console.warn('syncWidgetSharedState failed', e);

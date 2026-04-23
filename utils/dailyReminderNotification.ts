@@ -8,7 +8,7 @@ const REMINDER_BODY = 'יש לך פתק חדש לקרוא!';
 
 /**
  * Requests permission (when needed), then registers one repeating local notification
- * every day at 7:00 in the device’s local timezone.
+ * every day at 10:00 in the device’s local timezone.
  */
 export async function setupDailyReminderNotification(): Promise<void> {
   if (Platform.OS === 'web') return;
@@ -29,7 +29,7 @@ export async function setupDailyReminderNotification(): Promise<void> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 16,
+      hour: 10,
       minute: 0,
       ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
     },

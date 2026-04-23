@@ -36,12 +36,15 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const isAtBottomRef = useRef(true);
+  const lastMessagesSignatureRef = useRef('');
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>([]);
 
   useEffect(() => {
     checkUser();
     fetchMessages();
+    fetchReplyNotes();
     registerPushNotifications();
     const interval = setInterval(fetchMessages, 3000);
 
@@ -58,16 +61,6 @@ export default function ChatScreen() {
       hideSub.remove();
     };
   }, []);
-
-  // Scroll to bottom on initial load or new messages
-  useEffect(() => {
-    if (!loading && messages.length > 0) {
-      const timer = setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, messages.length]);
 
   const checkUser = async () => {
     const user = await getUser();
@@ -97,6 +90,15 @@ export default function ChatScreen() {
     return emojiRegex.test(cleanText);
   };
 
+  const fetchReplyNotes = async () => {
+    try {
+      const fetchedNotes = await fetchNotes();
+      setNotes(fetchedNotes);
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  };
+
   const fetchMessages = async () => {
     try {
       const password = await getPassword();
@@ -108,10 +110,17 @@ export default function ChatScreen() {
         const sortedMessages = data.sort(
           (a: Message, b: Message) => new Date(a.time).getTime() - new Date(b.time).getTime()
         );
-        setMessages(sortedMessages);
+        const firstId = sortedMessages[0]?.id ?? '';
+        const lastId = sortedMessages[sortedMessages.length - 1]?.id ?? '';
+        const lastTime = sortedMessages[sortedMessages.length - 1]?.time ?? '';
+        const signature = `${sortedMessages.length}:${firstId}:${lastId}:${lastTime}`;
+
+        // Avoid re-render churn every poll when data is unchanged.
+        if (signature !== lastMessagesSignatureRef.current) {
+          setMessages(sortedMessages);
+          lastMessagesSignatureRef.current = signature;
+        }
       }
-      const notes = await fetchNotes();
-      setNotes(notes);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -140,8 +149,9 @@ export default function ChatScreen() {
       });
 
       if (response.ok) {
-        fetchMessages();
-        flatListRef.current?.scrollToEnd({ animated: true });
+        await fetchMessages();
+        // In an inverted list, offset 0 is the latest message (bottom).
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -180,6 +190,7 @@ export default function ChatScreen() {
   };
 
   const groupedMessages = groupMessagesByTime(messages);
+  const listData = [...groupedMessages].reverse();
 
   const renderItem = ({ item }: { item: any }) => {
     if (item.type === 'time') {
@@ -197,8 +208,8 @@ export default function ChatScreen() {
 
     const isMe = item.sender === currentUser;
 
-    const currentIndex = groupedMessages.findIndex((m) => m.id === item.id);
-    const prevItem = currentIndex > 0 ? groupedMessages[currentIndex - 1] : null;
+    const currentIndex = listData.findIndex((m) => m.id === item.id);
+    const prevItem = currentIndex > 0 ? listData[currentIndex - 1] : null;
 
     // Only show reply indicator if:
     // 1. It is a reply
@@ -206,6 +217,11 @@ export default function ChatScreen() {
     const shouldShowReply =
       item.replyId && (!prevItem || !('replyId' in prevItem) || prevItem.replyId !== item.replyId);
     const isEmoji = isEmojiOnly(item.message);
+    const replyIndex = item.replyId ? Number(item.replyId) - 1 : -1;
+    const repliedNote = item.replyId
+      ? notes.find((note) => String(note.id) === String(item.replyId)) ??
+        (Number.isInteger(replyIndex) && replyIndex >= 0 ? notes[replyIndex] : undefined)
+      : undefined;
 
     return (
       <View className="flex flex-col gap-1">
@@ -222,7 +238,7 @@ export default function ChatScreen() {
                   אני אוהב אותך כל כך כי
                 </Text>
                 <Text className="text-center font-avigul text-4xl text-neutral-800 dark:text-white">
-                  {notes[item.replyId - 1].message}
+                  {repliedNote?.message ?? '...'}
                 </Text>
               </View>
               <View className="flex w-full flex-row items-center justify-end">
@@ -280,13 +296,20 @@ export default function ChatScreen() {
           ) : (
             <FlatList
               ref={flatListRef}
-              data={groupedMessages}
+              data={listData}
               renderItem={renderItem}
               keyExtractor={(item: any) => item.id}
+              inverted
               contentContainerStyle={{ paddingVertical: 16 }}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              onScroll={(event) => {
+                const { contentOffset } = event.nativeEvent;
+                // In inverted mode, near latest/bottom means near offset 0.
+                isAtBottomRef.current = contentOffset.y < 80;
+              }}
+              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
             />
           )}
 

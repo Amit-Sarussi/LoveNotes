@@ -8,6 +8,7 @@ private let widgetStateKey = "widget_state"
 private struct WidgetStatePayload: Codable {
     let daysPassed: Int
     let viewedNoteIds: [Int]
+    let syncedAtIso: String?
 }
 
 private func loadWidgetState() -> WidgetStatePayload {
@@ -16,9 +17,21 @@ private func loadWidgetState() -> WidgetStatePayload {
           let data = raw.data(using: .utf8),
           let decoded = try? JSONDecoder().decode(WidgetStatePayload.self, from: data)
     else {
-        return WidgetStatePayload(daysPassed: 0, viewedNoteIds: [])
+        return WidgetStatePayload(daysPassed: 0, viewedNoteIds: [], syncedAtIso: nil)
     }
     return decoded
+}
+
+private func dayDiffSinceSync(_ syncedAtIso: String?) -> Int {
+    guard let iso = syncedAtIso else { return 0 }
+    let formatter = ISO8601DateFormatter()
+    guard let syncDate = formatter.date(from: iso) else { return 0 }
+
+    let calendar = Calendar.current
+    let from = calendar.startOfDay(for: syncDate)
+    let to = calendar.startOfDay(for: Date())
+    let diff = calendar.dateComponents([.day], from: from, to: to).day ?? 0
+    return max(diff, 0)
 }
 
 /// PostScript names from the bundled TTFs (same files as `expo-font` in the app).
@@ -43,19 +56,32 @@ struct Provider: AppIntentTimelineProvider {
             date: Date(),
             configuration: ConfigurationAppIntent(),
             daysPassed: state.daysPassed,
-            viewedNoteIds: state.viewedNoteIds
+            viewedNoteIds: state.viewedNoteIds,
+            syncedAtIso: state.syncedAtIso
         )
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
         let state = loadWidgetState()
-        return SimpleEntry(date: Date(), configuration: configuration, daysPassed: state.daysPassed, viewedNoteIds: state.viewedNoteIds)
+        return SimpleEntry(
+            date: Date(),
+            configuration: configuration,
+            daysPassed: state.daysPassed,
+            viewedNoteIds: state.viewedNoteIds,
+            syncedAtIso: state.syncedAtIso
+        )
     }
 
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         let state = loadWidgetState()
         let currentDate = Date()
-        let entry = SimpleEntry(date: currentDate, configuration: configuration, daysPassed: state.daysPassed, viewedNoteIds: state.viewedNoteIds)
+        let entry = SimpleEntry(
+            date: currentDate,
+            configuration: configuration,
+            daysPassed: state.daysPassed,
+            viewedNoteIds: state.viewedNoteIds,
+            syncedAtIso: state.syncedAtIso
+        )
         // One entry + reload policy so each refresh re-reads the app group (stale multi-entry timelines would reuse one snapshot).
         let nextRefresh = Calendar.current.date(byAdding: .minute, value: 1, to: currentDate)!
         return Timeline(entries: [entry], policy: .after(nextRefresh))
@@ -67,14 +93,19 @@ struct SimpleEntry: TimelineEntry {
     let configuration: ConfigurationAppIntent
     let daysPassed: Int
     let viewedNoteIds: [Int]
+    let syncedAtIso: String?
+
+    var effectiveDaysPassed: Int {
+        daysPassed + dayDiffSinceSync(syncedAtIso)
+    }
 
     /// Calendar day index for “today’s” note (matches app: note `daysPassed` is unlockable from day 1 upward).
     var todayNoteId: Int {
-        min(max(daysPassed, 1), 365)
+        min(max(effectiveDaysPassed, 1), 365)
     }
 
     var hasNoteForToday: Bool {
-        daysPassed >= 1
+        effectiveDaysPassed >= 1
     }
 
     var hasReadTodaysNote: Bool {
@@ -91,7 +122,7 @@ struct widgetEntryView: View {
 
     var body: some View {
         Group {
-            if entry.daysPassed == 0 || (entry.hasNoteForToday && !entry.hasReadTodaysNote) {
+            if entry.effectiveDaysPassed == 0 || (entry.hasNoteForToday && !entry.hasReadTodaysNote) {
                 VStack(spacing: 0) {
                     Image("Envelope")
                         .resizable()
@@ -105,7 +136,7 @@ struct widgetEntryView: View {
                 .environment(\.layoutDirection, .rightToLeft)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("\(entry.daysPassed)")
+                    Text("\(entry.effectiveDaysPassed)")
                         .font(.custom(LoveNotesFont.bold, size: 46))
                         .foregroundStyle(LoveNotesColors.primary)
                     Text("/365")
@@ -153,6 +184,6 @@ extension ConfigurationAppIntent {
 #Preview(as: .systemSmall) {
     widget()
 } timeline: {
-    SimpleEntry(date: .now, configuration: .smiley, daysPassed: 12, viewedNoteIds: [1, 2, 3, 4, 5])
-    SimpleEntry(date: .now, configuration: .starEyes, daysPassed: 142, viewedNoteIds: Array(1 ... 142))
+    SimpleEntry(date: .now, configuration: .smiley, daysPassed: 12, viewedNoteIds: [1, 2, 3, 4, 5], syncedAtIso: nil)
+    SimpleEntry(date: .now, configuration: .starEyes, daysPassed: 142, viewedNoteIds: Array(1 ... 142), syncedAtIso: nil)
 }
