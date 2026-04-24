@@ -6,7 +6,7 @@ module.exports = {
     name: 'Love Notes',
     slug: 'love-notes',
     scheme: 'love-notes',
-    version: '1.1.0',
+    version: '1.2.0',
     web: {
       favicon: './assets/favicon.png',
     },

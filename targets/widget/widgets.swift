@@ -22,14 +22,14 @@ private func loadWidgetState() -> WidgetStatePayload {
     return decoded
 }
 
-private func dayDiffSinceSync(_ syncedAtIso: String?) -> Int {
+private func dayDiffSinceSync(_ syncedAtIso: String?, now: Date) -> Int {
     guard let iso = syncedAtIso else { return 0 }
     let formatter = ISO8601DateFormatter()
     guard let syncDate = formatter.date(from: iso) else { return 0 }
 
     let calendar = Calendar.current
     let from = calendar.startOfDay(for: syncDate)
-    let to = calendar.startOfDay(for: Date())
+    let to = calendar.startOfDay(for: now)
     let diff = calendar.dateComponents([.day], from: from, to: to).day ?? 0
     return max(diff, 0)
 }
@@ -75,16 +75,35 @@ struct Provider: AppIntentTimelineProvider {
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         let state = loadWidgetState()
         let currentDate = Date()
-        let entry = SimpleEntry(
+        let calendar = Calendar.current
+        let startOfTomorrow = calendar.startOfDay(for: currentDate).addingTimeInterval(24 * 60 * 60)
+        let startOfDayAfterTomorrow = startOfTomorrow.addingTimeInterval(24 * 60 * 60)
+
+        // Schedule explicit day-boundary entries so the widget flips state on a new day
+        // even if the host app isn't opened.
+        let nowEntry = SimpleEntry(
             date: currentDate,
             configuration: configuration,
             daysPassed: state.daysPassed,
             viewedNoteIds: state.viewedNoteIds,
             syncedAtIso: state.syncedAtIso
         )
-        // One entry + reload policy so each refresh re-reads the app group (stale multi-entry timelines would reuse one snapshot).
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 1, to: currentDate)!
-        return Timeline(entries: [entry], policy: .after(nextRefresh))
+        let tomorrowEntry = SimpleEntry(
+            date: startOfTomorrow,
+            configuration: configuration,
+            daysPassed: state.daysPassed,
+            viewedNoteIds: state.viewedNoteIds,
+            syncedAtIso: state.syncedAtIso
+        )
+        let dayAfterTomorrowEntry = SimpleEntry(
+            date: startOfDayAfterTomorrow,
+            configuration: configuration,
+            daysPassed: state.daysPassed,
+            viewedNoteIds: state.viewedNoteIds,
+            syncedAtIso: state.syncedAtIso
+        )
+
+        return Timeline(entries: [nowEntry, tomorrowEntry, dayAfterTomorrowEntry], policy: .atEnd)
     }
 }
 
@@ -96,7 +115,7 @@ struct SimpleEntry: TimelineEntry {
     let syncedAtIso: String?
 
     var effectiveDaysPassed: Int {
-        daysPassed + dayDiffSinceSync(syncedAtIso)
+        daysPassed + dayDiffSinceSync(syncedAtIso, now: date)
     }
 
     /// Calendar day index for “today’s” note (matches app: note `daysPassed` is unlockable from day 1 upward).
