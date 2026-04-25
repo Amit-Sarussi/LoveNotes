@@ -22,6 +22,17 @@ private func loadWidgetState() -> WidgetStatePayload {
     return decoded
 }
 
+private func normalizedSyncedAtIso(_ syncedAtIso: String?, fallbackDate: Date) -> String {
+    if let iso = syncedAtIso {
+        let formatter = ISO8601DateFormatter()
+        if formatter.date(from: iso) != nil {
+            return iso
+        }
+    }
+    // Backward compatibility for older payloads that had no/invalid sync timestamp.
+    return ISO8601DateFormatter().string(from: fallbackDate)
+}
+
 private func dayDiffSinceSync(_ syncedAtIso: String?, now: Date) -> Int {
     guard let iso = syncedAtIso else { return 0 }
     let formatter = ISO8601DateFormatter()
@@ -52,58 +63,64 @@ private enum LoveNotesColors {
 struct Provider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
         let state = loadWidgetState()
+        let now = Date()
+        let syncedAtIso = normalizedSyncedAtIso(state.syncedAtIso, fallbackDate: now)
         return SimpleEntry(
-            date: Date(),
+            date: now,
             configuration: ConfigurationAppIntent(),
             daysPassed: state.daysPassed,
             viewedNoteIds: state.viewedNoteIds,
-            syncedAtIso: state.syncedAtIso
+            syncedAtIso: syncedAtIso
         )
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
         let state = loadWidgetState()
+        let now = Date()
+        let syncedAtIso = normalizedSyncedAtIso(state.syncedAtIso, fallbackDate: now)
         return SimpleEntry(
-            date: Date(),
+            date: now,
             configuration: configuration,
             daysPassed: state.daysPassed,
             viewedNoteIds: state.viewedNoteIds,
-            syncedAtIso: state.syncedAtIso
+            syncedAtIso: syncedAtIso
         )
     }
 
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         let state = loadWidgetState()
         let currentDate = Date()
+        let syncedAtIso = normalizedSyncedAtIso(state.syncedAtIso, fallbackDate: currentDate)
         let calendar = Calendar.current
-        let startOfTomorrow = calendar.startOfDay(for: currentDate).addingTimeInterval(24 * 60 * 60)
-        let startOfDayAfterTomorrow = startOfTomorrow.addingTimeInterval(24 * 60 * 60)
-
-        // Schedule explicit day-boundary entries so the widget flips state on a new day
-        // even if the host app isn't opened.
-        let nowEntry = SimpleEntry(
+        // Build a long day-by-day timeline so the widget can keep flipping state at midnight
+        // even if the app is not opened for many days.
+        var entries: [SimpleEntry] = []
+        entries.append(SimpleEntry(
             date: currentDate,
             configuration: configuration,
             daysPassed: state.daysPassed,
             viewedNoteIds: state.viewedNoteIds,
-            syncedAtIso: state.syncedAtIso
-        )
-        let tomorrowEntry = SimpleEntry(
-            date: startOfTomorrow,
-            configuration: configuration,
-            daysPassed: state.daysPassed,
-            viewedNoteIds: state.viewedNoteIds,
-            syncedAtIso: state.syncedAtIso
-        )
-        let dayAfterTomorrowEntry = SimpleEntry(
-            date: startOfDayAfterTomorrow,
-            configuration: configuration,
-            daysPassed: state.daysPassed,
-            viewedNoteIds: state.viewedNoteIds,
-            syncedAtIso: state.syncedAtIso
-        )
+            syncedAtIso: syncedAtIso
+        ))
 
-        return Timeline(entries: [nowEntry, tomorrowEntry, dayAfterTomorrowEntry], policy: .atEnd)
+        let startOfToday = calendar.startOfDay(for: currentDate)
+        let futureDays = 30
+        for dayOffset in 1 ... futureDays {
+            guard let boundaryDate = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday) else {
+                continue
+            }
+            entries.append(SimpleEntry(
+                date: boundaryDate,
+                configuration: configuration,
+                daysPassed: state.daysPassed,
+                viewedNoteIds: state.viewedNoteIds,
+                syncedAtIso: syncedAtIso
+            ))
+        }
+
+        // Ask WidgetKit for a fresh timeline after our last scheduled entry.
+        let fallbackRefresh = calendar.date(byAdding: .hour, value: 1, to: entries.last?.date ?? currentDate) ?? currentDate
+        return Timeline(entries: entries, policy: .after(fallbackRefresh))
     }
 }
 
