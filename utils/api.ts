@@ -1,5 +1,7 @@
 import { getPassword } from './storage';
 
+const MAX_APP_DAY = 50;
+
 export const API_BASE_URL = "https://nontypically-estuarine-jace.ngrok-free.dev/api";
 export const API_BASE_URL_CLEAN = "https://nontypically-estuarine-jace.ngrok-free.dev";
 
@@ -23,7 +25,8 @@ export async function fetchNotes(): Promise<Note[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch notes");
   }
-  return response.json();
+  const notes: Note[] = await response.json();
+  return notes.slice(0, MAX_APP_DAY);
 }
 
 export interface ChatMessage {

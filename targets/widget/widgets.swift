@@ -4,6 +4,8 @@ import WidgetKit
 
 private let appGroupId = "group.me.amitsarussi.lovenotesapp"
 private let widgetStateKey = "widget_state"
+/// Keep in sync with `MAX_APP_DAY` in `utils/startDate.ts`.
+private let maxAppDay = 50
 
 private struct WidgetStatePayload: Codable {
     let daysPassed: Int
@@ -135,13 +137,17 @@ struct SimpleEntry: TimelineEntry {
         daysPassed + dayDiffSinceSync(syncedAtIso, now: date)
     }
 
+    var cappedEffectiveDaysPassed: Int {
+        min(max(effectiveDaysPassed, 0), maxAppDay)
+    }
+
     /// Calendar day index for “today’s” note (matches app: note `daysPassed` is unlockable from day 1 upward).
     var todayNoteId: Int {
-        min(max(effectiveDaysPassed, 1), 365)
+        min(max(cappedEffectiveDaysPassed, 1), maxAppDay)
     }
 
     var hasNoteForToday: Bool {
-        effectiveDaysPassed >= 1
+        cappedEffectiveDaysPassed >= 1
     }
 
     var hasReadTodaysNote: Bool {
@@ -158,7 +164,7 @@ struct widgetEntryView: View {
 
     var body: some View {
         Group {
-            if entry.effectiveDaysPassed == 0 || (entry.hasNoteForToday && !entry.hasReadTodaysNote) {
+            if entry.cappedEffectiveDaysPassed == 0 || (entry.hasNoteForToday && !entry.hasReadTodaysNote) {
                 VStack(spacing: 0) {
                     Image("Envelope")
                         .resizable()
@@ -172,10 +178,10 @@ struct widgetEntryView: View {
                 .environment(\.layoutDirection, .rightToLeft)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("\(entry.effectiveDaysPassed)")
+                    Text("\(entry.cappedEffectiveDaysPassed)")
                         .font(.custom(LoveNotesFont.bold, size: 46))
                         .foregroundStyle(LoveNotesColors.primary)
-                    Text("/365")
+                    Text("/\(maxAppDay)")
                         .font(.custom(LoveNotesFont.regular, size: 40))
                         .foregroundStyle(LoveNotesColors.onGradientMuted)
                 }

@@ -21,6 +21,8 @@ import { getUser, setViewedNote } from '../../utils/storage';
 import { initStartDate } from '../../utils/startDate';
 import { Ionicons } from '@expo/vector-icons';
 
+const MAX_APP_DAY = 50;
+
 export default function NoteScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -52,7 +54,7 @@ export default function NoteScreen() {
         return;
       }
       const noteNum = Number(raw);
-      if (Number.isNaN(noteNum) || noteNum < 1) {
+      if (Number.isNaN(noteNum) || noteNum < 1 || noteNum > MAX_APP_DAY) {
         setError('Invalid note');
         setLoading(false);
         return;

@@ -4,6 +4,8 @@ import StyledButton from './StyledButton';
 import { useRouter } from 'expo-router';
 import { setViewedNote } from '@utils/storage';
 
+const MAX_APP_DAY = 50;
+
 export type ProgressMapRef = {
   scrollToToday: () => void;
 };
@@ -20,7 +22,7 @@ const ProgressMap = forwardRef<ProgressMapRef, ProgressMapProps>(
     const scrollRef = useRef<ScrollView>(null);
     const lastPassed = useRef<boolean>(false);
 
-    const totalButtons = 365;
+    const totalButtons = MAX_APP_DAY;
     const spacingY = 100;
     const amplitude = 120;
     const buttonWidth = 90;

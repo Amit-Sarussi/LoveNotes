@@ -17,6 +17,8 @@ import { router, useFocusEffect } from 'expo-router';
 
 import { useColorScheme } from 'nativewind';
 
+const MAX_APP_DAY = 50;
+
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -142,7 +144,7 @@ export default function HomeScreen() {
           <ProgressBar />
           <View className="flex flex-row-reverse items-center gap-2 py-2">
             <Text className="font-avigul text-[22px] text-natural dark:text-neutral-100">
-              <Text className="font-avigul-bold text-primary">{daysPassed}</Text>/365
+              <Text className="font-avigul-bold text-primary">{daysPassed}</Text>/{MAX_APP_DAY}
             </Text>
             <Text className="font-avigul-bold text-[19px] text-natural dark:text-neutral-100">
               -
